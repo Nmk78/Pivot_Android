@@ -139,7 +139,7 @@ export function VoiceRecorderButton({
               onPress={handlePauseResume}
               className={cn(
                 sizeClasses[size],
-                'rounded-full bg-blue-500 items-center justify-center'
+                'rounded-full bg-blue-500 dark:bg-blue-600 items-center justify-center'
               )}
             >
               {isPaused ? (
@@ -155,7 +155,7 @@ export function VoiceRecorderButton({
             disabled={isProcessing}
             className={cn(
               sizeClasses[size],
-              'rounded-full bg-red-500 items-center justify-center',
+              'rounded-full bg-red-500 dark:bg-red-600 items-center justify-center',
               isProcessing && 'opacity-50'
             )}
           >
@@ -166,7 +166,7 @@ export function VoiceRecorderButton({
             onPress={handleCancel}
             className={cn(
               sizeClasses[size],
-              'rounded-full bg-gray-500 items-center justify-center'
+              'rounded-full bg-gray-500 dark:bg-gray-600 items-center justify-center'
             )}
           >
             <MicOff size={iconSizes[size]} color="white" />
@@ -182,7 +182,7 @@ export function VoiceRecorderButton({
       disabled={disabled}
       className={cn(
         sizeClasses[size],
-        'rounded-full bg-blue-500 items-center justify-center',
+        'rounded-full bg-blue-500 dark:bg-blue-600 items-center justify-center',
         disabled && 'opacity-50'
       )}
     >

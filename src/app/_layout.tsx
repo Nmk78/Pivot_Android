@@ -8,7 +8,8 @@ export default function Layout() {
         <Stack.Screen
           name="(app)/index"
           options={{
-            headerTitle: "Expo AI Chatbot",
+            // headerTitle: "Expo AI Chatbot",
+            headerShown:false,
           }}
         />
       </Stack>

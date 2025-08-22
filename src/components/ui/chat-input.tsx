@@ -148,6 +148,9 @@ export const ChatInput = forwardRef<TextInput, Props>(
 
     // Get recording state for floating indicator
     const { isRecording, recordingDuration, formatDuration } = useVoiceRecorder();
+    
+    // Local loading state for better UX
+    const [isLocalLoading, setIsLocalLoading] = useState(false);
 
     useEffect(() => {
       if (focusOnMount) {
@@ -196,6 +199,22 @@ export const ChatInput = forwardRef<TextInput, Props>(
       return "Message";
     };
 
+    // Handle submit with loading delay for better UX
+    const handleSubmitWithDelay = async () => {
+      if (isLocalLoading) return;
+      
+      setIsLocalLoading(true);
+      
+      try {
+        await onSubmit();
+      } finally {
+        // Ensure loading shows for at least 0.5 seconds
+        setTimeout(() => {
+          setIsLocalLoading(false);
+        }, 500);
+      }
+    };
+
     return (
       <KeyboardAvoidingView>
         <Animated.View style={animatedStyles}>
@@ -208,23 +227,23 @@ export const ChatInput = forwardRef<TextInput, Props>(
               exiting={FadeOut.duration(200)}
               className="mx-4 mb-2"
             >
-              <View className="flex-row items-center justify-between bg-green-50 dark:bg-green-900 rounded-lg px-3 py-2 border border-green-200 dark:border-green-700">
+              <View className="flex-row items-center justify-between bg-green-50 dark:bg-green-900/50 rounded-lg px-3 py-2 border border-green-200 dark:border-green-700/50">
                 <View className="flex-row items-center flex-1">
-                  <Paperclip size={16} color="#16a34a" />
+                  <Paperclip size={16} color={colorScheme === 'dark' ? '#4ade80' : '#16a34a'} />
                   <View className="ml-2 flex-1">
-                    <Text className="text-green-700 dark:text-green-300 text-sm font-medium" numberOfLines={1}>
+                    <Text className="text-green-700 dark:text-green-200 text-sm font-medium" numberOfLines={1}>
                       {selectedFile.name}
                     </Text>
-                    <Text className="text-green-600 dark:text-green-400 text-xs">
+                    <Text className="text-green-600 dark:text-green-300 text-xs">
                       File selected • Tap to ask about this file
                     </Text>
                   </View>
                 </View>
                 <Pressable
                   onPress={onFileRemoved}
-                  className="ml-2 p-1"
+                  className="ml-2 p-1 rounded-full hover:bg-green-100 dark:hover:bg-green-800/50"
                 >
-                  <X size={18} color="#16a34a" />
+                  <X size={18} color={colorScheme === 'dark' ? '#4ade80' : '#16a34a'} />
                 </Pressable>
               </View>
             </Animated.View>
@@ -237,20 +256,20 @@ export const ChatInput = forwardRef<TextInput, Props>(
               exiting={FadeOut.duration(200)}
               className="mx-4 mb-2"
             >
-              <View className="flex-row items-center justify-between bg-red-50 dark:bg-red-900 rounded-lg px-3 py-2 border border-red-200 dark:border-red-700">
+              <View className="flex-row items-center justify-between bg-red-50 dark:bg-red-900/50 rounded-lg px-3 py-2 border border-red-200 dark:border-red-700/50">
                 <View className="flex-row items-center flex-1">
                   <Animated.View
                     style={{
                       transform: [{ scale: withTiming(1.2, { duration: 500 }) }]
                     }}
                   >
-                    <Mic size={16} color="#dc2626" />
+                    <Mic size={16} color={colorScheme === 'dark' ? '#f87171' : '#dc2626'} />
                   </Animated.View>
                   <View className="ml-2 flex-1">
-                    <Text className="text-red-700 dark:text-red-300 text-sm font-medium">
+                    <Text className="text-red-700 dark:text-red-200 text-sm font-medium">
                       Recording... {formatDuration(recordingDuration)}
                     </Text>
-                    <Text className="text-red-600 dark:text-red-400 text-xs">
+                    <Text className="text-red-600 dark:text-red-300 text-xs">
                       Tap stop when finished
                     </Text>
                   </View>
@@ -293,16 +312,23 @@ export const ChatInput = forwardRef<TextInput, Props>(
               size="icon"
               className="android:h-12 android:w-12 rounded-full bg-black dark:bg-white"
               onPress={() => {
-                onSubmit();
+                handleSubmitWithDelay();
                 Keyboard.dismiss();
               }}
-              disabled={disabled || (!input.trim() && !selectedFile)}
+              disabled={disabled || isLocalLoading || (!input.trim() && !selectedFile)}
             >
-              <ArrowUp
-                color={colorScheme === "dark" ? "black" : "white"}
-                size={20}
-                className="h-6 w-6"
-              />
+              {isLocalLoading ? (
+                <ActivityIndicator 
+                  size="small" 
+                  color={colorScheme === "dark" ? "black" : "white"} 
+                />
+              ) : (
+                <ArrowUp
+                  color={colorScheme === "dark" ? "black" : "white"}
+                  size={20}
+                  className="h-6 w-6"
+                />
+              )}
             </Button>
           </View>
         </Animated.View>

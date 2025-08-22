@@ -113,8 +113,8 @@ export function FilePickerButton({
         sizeClasses[size],
         'rounded-full items-center justify-center',
         selectedFile && compact 
-          ? 'bg-green-500' 
-          : 'bg-blue-500',
+          ? 'bg-green-500 dark:bg-green-600' 
+          : 'bg-blue-500 dark:bg-blue-600',
         (disabled || isPicking) && 'opacity-50'
       )}
     >

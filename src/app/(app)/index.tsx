@@ -139,20 +139,20 @@ const HomePage = () => {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: "hey",
+          title: "Pivot",
 
           headerRight: () => (
             <Pressable disabled={!messages.length} onPress={handleNewChat}>
               <MessageCirclePlusIcon
                 size={20}
-                color={!messages.length ? "#eee" : "black"}
+                color={!messages.length ? "#11f" : "black"}
               />
             </Pressable>
           ),
         }}
       />
       <ScrollView
-        className="container relative mx-auto flex-1 bg-white dark:bg-black"
+        className="container relative mx-auto flex-1 bg-white dark:bg-slate-950"
         ref={scrollViewRef}
       >
         <ChatInterface
