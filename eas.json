@@ -66,14 +66,12 @@
       },
       "autoIncrement": true
     },
-"production": {
-  "env": {
-    "APP_ENV": "production",
-    "NODE_ENV": "production"
-  },
-  "channel": "production"
-}
-
+    "production": {
+      "env": {
+        "APP_ENV": "production",
+        "NODE_ENV": "production"
+      }
+    }
   },
   "submit": {
     "production": {}
