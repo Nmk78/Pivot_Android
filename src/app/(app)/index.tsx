@@ -13,6 +13,7 @@ import { MessageCirclePlusIcon, Menu } from "lucide-react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useChatState } from "@/hooks/useChatState";
 import { SelectedFile } from "@/hooks/useFilePicker";
+import { useColorScheme } from "@/lib/useColorScheme";
 
 type WeatherResult = {
   city: string;
@@ -130,29 +131,33 @@ const HomePage = () => {
     }
   }, [chatId, clearMessages]);
 
+  const { colorScheme, setColorScheme, isDarkColorScheme } = useColorScheme();
+
   return (
     <Animated.View
       entering={FadeIn.duration(250)}
-      className="flex-1 bg-white dark:bg-black"
+      className="flex-1 bg-white dark:bg-slate-950"
       style={{ paddingBottom: bottom }}
     >
       <Stack.Screen
         options={{
           headerShown: true,
           title: "Pivot",
+          headerStyle: { backgroundColor: isDarkColorScheme ? "#1e293b" : "#51a2ff" },
+          headerTitleStyle: { color: "white" },
 
           headerRight: () => (
-            <Pressable disabled={!messages.length} onPress={handleNewChat}>
+            <Pressable className="mr-5" disabled={!messages.length} onPress={handleNewChat}>
               <MessageCirclePlusIcon
                 size={20}
-                color={!messages.length ? "#11f" : "black"}
+                color="#eee"
               />
             </Pressable>
           ),
         }}
       />
       <ScrollView
-        className="container relative mx-auto flex-1 bg-white dark:bg-slate-950"
+        className="container relative mx-auto flex-1 bg-white dark:bg-slate-900"
         ref={scrollViewRef}
       >
         <ChatInterface

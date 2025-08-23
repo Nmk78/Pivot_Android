@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Pressable, Text } from 'react-native';
-import { FileText, X, Upload } from 'lucide-react-native';
+import { FileText, X, Upload, Paperclip } from 'lucide-react-native';
 import { useFilePicker, SelectedFile } from '@/hooks/useFilePicker';
 import { cn } from '@/lib/utils';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -99,7 +99,7 @@ export function FilePickerButton({
             (disabled || isPicking) && 'opacity-50'
           )}
         >
-          <Upload size={iconSizes[size]} color="#ef4444" />
+          <Paperclip size={iconSizes[size]} color="#ef4444" />
         </Pressable>
       </View>
     );

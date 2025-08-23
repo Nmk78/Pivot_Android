@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "expo-ai-chatbot-lite",
-    "slug": "expo-ai-chatbot-lite",
-    "scheme": "lite.expoaichatbot.com",
+    "name": "Pivot",
+    "slug": "pivot",
+    "scheme": "lite.pivot.com",
     "userInterfaceStyle": "automatic",
     "orientation": "portrait",
     "version": "0.0.1",
@@ -10,7 +10,9 @@
       "output": "server",
       "bundler": "metro"
     },
-    "assetBundlePatterns": ["src/assets/**/*"],
+    "assetBundlePatterns": [
+      "src/assets/**/*"
+    ],
     "plugins": [
       [
         "expo-router",
@@ -67,7 +69,12 @@
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "ios": {
@@ -81,10 +88,13 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "owner": "bidah",
+    "owner": "naymyokhant",
     "extra": {
       "eas": {
-        "projectId": "b88444bb-597c-4abf-8322-686e6e525a07"
+        "projectId": "eb6a0abc-050a-4ab1-bd46-317beca9e1f9"
+      },
+      "router": {
+        "origin": "http://localhost:8081"
       }
     },
     "icon": "./src/assets/icon.png",
@@ -92,6 +102,9 @@
       "image": "./src/assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/eb6a0abc-050a-4ab1-bd46-317beca9e1f9"
     }
   }
 }
