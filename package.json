@@ -37,6 +37,7 @@
     "@expo/vector-icons": "^14.1.0",
     "@gorhom/bottom-sheet": "^5.1.1",
     "@hookform/resolvers": "^3.9.0",
+    "@lottiefiles/dotlottie-react": "^0.15.1",
     "@radix-ui/react-avatar": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-label": "^2.1.0",
@@ -140,14 +141,14 @@
     "typescript": "~5.8.3"
   },
   "overrides": {
-  "react-native": {
-    "react": "18.3.1",
-    "@types/react": "18.3.24"
+    "react-native": {
+      "react": "18.3.1",
+      "@types/react": "18.3.24"
+    },
+    "@react-native/virtualized-lists": {
+      "@types/react": "18.3.24"
+    }
   },
-  "@react-native/virtualized-lists": {
-    "@types/react": "18.3.24"
-  }
-},
   "private": true,
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
