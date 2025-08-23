@@ -9,7 +9,6 @@
     "ios": "expo run:ios",
     "ios:device": "expo run:ios -d",
     "web": "expo start --web",
-    "postinstall": "patch-package",
     "start:dev-client": "bun expo:prebuild && bun expo start --dev-client",
     "expo:prebuild": "expo prebuild --skip-dependency-update react-native,react",
     "expo:prebuild:android:clean": "npx expo prebuild -p android --clean",
