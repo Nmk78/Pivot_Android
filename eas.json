@@ -71,7 +71,15 @@
         "APP_ENV": "production",
         "NODE_ENV": "production"
       },
-      "channel": "production"
+      "channel": "production",
+      "android": {
+        "buildType": "app-bundle",
+        "nodeModules": "install"
+      },
+      "ios": {
+        "buildType": "archive",
+        "nodeModules": "install"
+      }
     }
   },
   "submit": {
