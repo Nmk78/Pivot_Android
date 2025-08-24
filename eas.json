@@ -7,6 +7,7 @@
       "distribution": "internal",
       "developmentClient": true,
       "channel": "development",
+      "node": "20.19.4",
       "env": {
         "APP_ENV": "development"
       },
@@ -19,6 +20,7 @@
       "distribution": "internal",
       "developmentClient": true,
       "channel": "development",
+      "node": "20.19.4",
       "env": {
         "APP_ENV": "development"
       },
@@ -31,6 +33,7 @@
       "distribution": "internal",
       "developmentClient": true,
       "channel": "development",
+      "node": "20.19.4",
       "env": {
         "APP_ENV": "development"
       },
@@ -41,6 +44,7 @@
     "development": {
       "distribution": "internal",
       "channel": "development",
+      "node": "20.19.4",
       "env": {
         "APP_ENV": "development",
         "NODE_ENV": "development"
@@ -55,6 +59,7 @@
     "staging": {
       "distribution": "store",
       "channel": "staging",
+      "node": "20.19.4",
       "android": {
         "buildType": "apk"
       },
@@ -67,10 +72,12 @@
       "autoIncrement": true
     },
     "production": {
+      "node": "20.19.4",
       "env": {
         "APP_ENV": "production",
         "NODE_ENV": "production"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

@@ -29,7 +29,7 @@
             "deploymentTarget": "15.1"
           },
           "android": {
-            "kotlinVersion": "1.6.21"
+            "kotlinVersion": "1.9.22"
           }
         }
       ],
@@ -59,13 +59,14 @@
           "image": "./src/assets/splash.png",
           "imageWidth": 200
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "android": {
-      "package": "com.expoaichatbot.lite",
+      "package": "com.pivot.cyberpearl",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -78,7 +79,7 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.expoaichatbot.lite",
+      "bundleIdentifier": "com.pivot.cyberpearl",
       "supportsTablet": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app needs access to your microphone to record voice messages.",
