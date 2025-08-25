@@ -1,4 +1,15 @@
-import { textQuery, textQueryWithFile, speechToText, uploadFile } from './api-client';
+import { 
+  textQuery, 
+  textQueryWithFile, 
+  speechToText, 
+  uploadFile,
+  createChatSession,
+  sendChatMessage,
+  getChatHistory,
+  getChatSessions,
+  type ChatSession
+} from './api-client';
+import { authService } from './auth-service';
 import * as FileSystem from 'expo-file-system';
 
 export interface ChatMessage {
@@ -12,24 +23,41 @@ export interface ChatMessage {
 }
 
 export interface ChatService {
-  sendMessage: (message: string) => Promise<string>;
-  sendMessageWithFile: (message: string, fileUri: string) => Promise<{ userMessage: ChatMessage; response: string }>;
-  sendSpeechMessage: (audioUri: string) => Promise<{ userMessage: ChatMessage; response: string; transcription: string }>;
+  sendMessage: (message: string, sessionId?: string) => Promise<{ response: string; sessionId: string }>;
+  sendMessageWithFile: (message: string, fileUri: string, sessionId?: string) => Promise<{ userMessage: ChatMessage; response: string; sessionId: string }>;
+  sendSpeechMessage: (audioUri: string, sessionId?: string) => Promise<{ userMessage: ChatMessage; response: string; transcription: string; sessionId: string }>;
   uploadFileForContext: (fileUri: string, fileName: string) => Promise<string>;
+  createSession: (title?: string) => Promise<ChatSession>;
+  getSessions: () => Promise<ChatSession[]>;
+  getSessionHistory: (sessionId: string) => Promise<ChatMessage[]>;
 }
 
 class ChatServiceImpl implements ChatService {
-  async sendMessage(message: string): Promise<string> {
+  private currentSessionId: string | null = null;
+
+  async sendMessage(message: string, sessionId?: string): Promise<{ response: string; sessionId: string }> {
     try {
-      const response = await textQuery(message);
-      return response.response;
+      let activeSessionId = sessionId || this.currentSessionId;
+      
+      if (!activeSessionId) {
+        // Create a new session if none exists
+        const session = await createChatSession('New Chat');
+        activeSessionId = session.id;
+        this.currentSessionId = activeSessionId;
+      }
+
+      const response = await sendChatMessage(activeSessionId, message);
+      return {
+        response: response.content,
+        sessionId: activeSessionId,
+      };
     } catch (error) {
       console.error('Error sending message:', error);
       throw new Error('Failed to send message');
     }
   }
 
-  async sendMessageWithFile(message: string, fileUri: string): Promise<{ userMessage: ChatMessage; response: string }> {
+  async sendMessageWithFile(message: string, fileUri: string, sessionId?: string): Promise<{ userMessage: ChatMessage; response: string; sessionId: string }> {
     try {
       // For React Native, we'll use the file URI directly with FormData
       const fileInfo = await FileSystem.getInfoAsync(fileUri);
@@ -45,7 +73,15 @@ class ChatServiceImpl implements ChatService {
         name: fileName,
       };
 
-      const response = await textQueryWithFile(message, fileData as any);
+      let activeSessionId = sessionId || this.currentSessionId;
+      
+      if (!activeSessionId) {
+        const session = await createChatSession('File Chat');
+        activeSessionId = session.id;
+        this.currentSessionId = activeSessionId;
+      }
+
+      const response = await textQueryWithFile(message, fileData as any, activeSessionId);
       
       const userMessage: ChatMessage = {
         id: Date.now().toString(),
@@ -57,7 +93,8 @@ class ChatServiceImpl implements ChatService {
 
       return {
         userMessage,
-        response: response.response || 'No response received'
+        response: response.response || 'No response received',
+        sessionId: activeSessionId,
       };
     } catch (error) {
       console.error('Error sending message with file:', error);
@@ -65,7 +102,7 @@ class ChatServiceImpl implements ChatService {
     }
   }
 
-  async sendSpeechMessage(audioUri: string): Promise<{ userMessage: ChatMessage; response: string; transcription: string }> {
+  async sendSpeechMessage(audioUri: string, sessionId?: string): Promise<{ userMessage: ChatMessage; response: string; transcription: string; sessionId: string }> {
     try {
       const fileInfo = await FileSystem.getInfoAsync(audioUri);
       if (!fileInfo.exists) {
@@ -80,7 +117,15 @@ class ChatServiceImpl implements ChatService {
         name: fileName,
       };
 
-      const response = await speechToText(fileData as any);
+      let activeSessionId = sessionId || this.currentSessionId;
+      
+      if (!activeSessionId) {
+        const session = await createChatSession('Voice Chat');
+        activeSessionId = session.id;
+        this.currentSessionId = activeSessionId;
+      }
+
+      const response = await speechToText(fileData as any, activeSessionId);
       
       const userMessage: ChatMessage = {
         id: Date.now().toString(),
@@ -94,7 +139,8 @@ class ChatServiceImpl implements ChatService {
       return {
         userMessage,
         response: response.response || 'No response received',
-        transcription: response.transcription || ''
+        transcription: response.transcription || '',
+        sessionId: activeSessionId,
       };
     } catch (error) {
       console.error('Error processing speech:', error);
@@ -123,6 +169,49 @@ class ChatServiceImpl implements ChatService {
       console.error('Error uploading file:', error);
       throw new Error('Failed to upload file');
     }
+  }
+
+  async createSession(title?: string): Promise<ChatSession> {
+    try {
+      const session = await createChatSession(title || 'New Chat');
+      this.currentSessionId = session.id;
+      return session;
+    } catch (error) {
+      console.error('Error creating session:', error);
+      throw new Error('Failed to create session');
+    }
+  }
+
+  async getSessions(): Promise<ChatSession[]> {
+    try {
+      return await getChatSessions();
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      throw new Error('Failed to fetch sessions');
+    }
+  }
+
+  async getSessionHistory(sessionId: string): Promise<ChatMessage[]> {
+    try {
+      const history = await getChatHistory(sessionId);
+      return history.messages.map(msg => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        timestamp: new Date(msg.created_at),
+      }));
+    } catch (error) {
+      console.error('Error fetching session history:', error);
+      throw new Error('Failed to fetch session history');
+    }
+  }
+
+  setCurrentSession(sessionId: string) {
+    this.currentSessionId = sessionId;
+  }
+
+  getCurrentSessionId(): string | null {
+    return this.currentSessionId;
   }
 
   private getMimeType(fileName: string): string {

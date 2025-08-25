@@ -6,17 +6,13 @@ import { Image } from "expo-image";
 import { Button } from "./ui/button";
 import { Plus } from "lucide-react-native";
 import { Avatar } from "./ui/avatar";
-import { CircleUserRound, UserCircle2 } from "lucide-react";
+import { CircleUserRound, UserCircle2 } from "lucide-react-native";
+import { useAuth } from "@/providers/auth-provider";
 
 export default function Sidebar() {
   const router = useRouter();
   const { chatSessions, setCurrentChatId, createNewChat } = useChatState();
-
-  const user = null;
-  //   const user = {
-  //     name: "John Doe",
-  //     avatarUrl: "https://example.com/avatar.jpg",
-  //   }; // Replace with actual user data or null if not signed in
+  const { user } = useAuth();
   const handleNewChat = () => {
     createNewChat();
   };
@@ -71,29 +67,39 @@ export default function Sidebar() {
       {user ? (
         <TouchableOpacity
           onPress={handleProfile}
-          className="flex-row items-center space-x-3"
+          className="flex-row items-center space-x-3 mb-4"
         >
-          {/* <Avatar alt="User Profile" className="border-2" /> */}
-          {user.avatarUrl ? (
-            <Image
-              source={{ uri: user.avatarUrl }}
-              style={{ width: 40, height: 40, borderRadius: 20 }}
-            />
-          ) : (
-            <UserCircle2 size={40} className="text-gray-800 dark:text-white" />
-          )}
-          <Text className="text-lg font-semibold text-gray-800 dark:text-white">
-            {user.name}
-          </Text>
+          <UserCircle2 size={40} className="text-gray-800 dark:text-white" />
+          <View>
+            <Text className="text-lg font-semibold text-gray-800 dark:text-white">
+              {user.full_name || user.username}
+            </Text>
+            <Text className="text-sm text-gray-600 dark:text-gray-400">
+              {user.email}
+            </Text>
+          </View>
         </TouchableOpacity>
       ) : (
-        <Button
-          variant="pill"
-          className="mb-10 bg-blue-500"
-          onPress={() => router.push("/login")}
-        >
-          <Text className="text-gray-100">Sign In</Text>
-        </Button>
+        <View className="mb-4">
+          <View className="flex-row items-center space-x-3 mb-3">
+            <UserCircle2 size={40} className="text-gray-400" />
+            <View>
+              <Text className="text-lg font-semibold text-gray-600 dark:text-gray-400">
+                Guest User
+              </Text>
+              <Text className="text-sm text-gray-500 dark:text-gray-500">
+                Sign in to save your chats
+              </Text>
+            </View>
+          </View>
+          <Button
+            variant="pill"
+            className="bg-blue-500"
+            onPress={() => router.push("/login")}
+          >
+            <Text className="text-gray-100">Sign In</Text>
+          </Button>
+        </View>
       )}
     </View>
   );

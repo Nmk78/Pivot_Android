@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { chatService, ChatMessage } from '@/lib/chat-service';
 import { generateUUID } from '@/lib/utils';
 import { SelectedFile } from './useFilePicker';
+import { type ChatSession } from '@/lib/api-client';
 
 export interface UseChatStateReturn {
   messages: ChatMessage[];
@@ -12,15 +13,78 @@ export interface UseChatStateReturn {
   uploadFileForContext: (file: SelectedFile) => Promise<string>;
   clearMessages: () => void;
   error: string | null;
+  // New properties for session management
+  chatSessions: ChatSession[];
+  currentSessionId: string | null;
+  setCurrentChatId: (sessionId: string) => void;
+  createNewChat: () => Promise<void>;
+  loadChatHistory: (sessionId: string) => Promise<void>;
 }
 
 export function useChatState(): UseChatStateReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+
+  // Load chat sessions on mount
+  useEffect(() => {
+    loadSessions();
+  }, []);
+
+  const loadSessions = useCallback(async () => {
+    try {
+      const sessions = await chatService.getSessions();
+      setChatSessions(sessions);
+    } catch (err) {
+      console.error('Failed to load chat sessions:', err);
+    }
+  }, []);
+
+  const createNewChat = useCallback(async () => {
+    try {
+      const newSession = await chatService.createSession('New Chat');
+      setChatSessions(prev => [newSession, ...prev]);
+      setCurrentSessionId(newSession.id);
+      setMessages([]);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to create new chat:', err);
+      setError('Failed to create new chat');
+    }
+  }, []);
+
+  const setCurrentChatId = useCallback(async (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    chatService.setCurrentSession(sessionId);
+    await loadChatHistory(sessionId);
+  }, []);
+
+  const loadChatHistory = useCallback(async (sessionId: string) => {
+    try {
+      setIsLoading(true);
+      const history = await chatService.getSessionHistory(sessionId);
+      setMessages(history);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load chat history:', err);
+      setError('Failed to load chat history');
+      setMessages([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
+
+    // Create a new session if none exists
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      await createNewChat();
+      sessionId = chatService.getCurrentSessionId();
+    }
 
     const userMessage: ChatMessage = {
       id: generateUUID(),
@@ -34,16 +98,22 @@ export function useChatState(): UseChatStateReturn {
     setError(null);
 
     try {
-      const response = await chatService.sendMessage(content);
+      const response = await chatService.sendMessage(content, sessionId || undefined);
       
       const assistantMessage: ChatMessage = {
         id: generateUUID(),
         role: 'assistant',
-        content: response,
+        content: response.response,
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Update current session ID if it changed
+      if (response.sessionId !== sessionId) {
+        setCurrentSessionId(response.sessionId);
+        chatService.setCurrentSession(response.sessionId);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
       setError(errorMessage);
@@ -60,16 +130,23 @@ export function useChatState(): UseChatStateReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentSessionId, createNewChat]);
 
   const sendMessageWithFile = useCallback(async (content: string, file: SelectedFile) => {
     if (!content.trim() || !file) return;
+
+    // Create a new session if none exists
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      await createNewChat();
+      sessionId = chatService.getCurrentSessionId();
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await chatService.sendMessageWithFile(content, file.uri);
+      const result = await chatService.sendMessageWithFile(content, file.uri, sessionId || undefined);
       
       // Add user message
       setMessages(prev => [...prev, result.userMessage]);
@@ -83,6 +160,12 @@ export function useChatState(): UseChatStateReturn {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Update current session ID if it changed
+      if (result.sessionId !== sessionId) {
+        setCurrentSessionId(result.sessionId);
+        chatService.setCurrentSession(result.sessionId);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message with file';
       setError(errorMessage);
@@ -107,16 +190,23 @@ export function useChatState(): UseChatStateReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentSessionId, createNewChat]);
 
   const sendSpeechMessage = useCallback(async (audioUri: string) => {
     if (!audioUri) return;
+
+    // Create a new session if none exists
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      await createNewChat();
+      sessionId = chatService.getCurrentSessionId();
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await chatService.sendSpeechMessage(audioUri);
+      const result = await chatService.sendSpeechMessage(audioUri, sessionId || undefined);
       
       // Add user message
       setMessages(prev => [...prev, result.userMessage]);
@@ -130,6 +220,12 @@ export function useChatState(): UseChatStateReturn {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Update current session ID if it changed
+      if (result.sessionId !== sessionId) {
+        setCurrentSessionId(result.sessionId);
+        chatService.setCurrentSession(result.sessionId);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to process speech';
       setError(errorMessage);
@@ -145,7 +241,7 @@ export function useChatState(): UseChatStateReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentSessionId, createNewChat]);
 
   const uploadFileForContext = useCallback(async (file: SelectedFile): Promise<string> => {
     if (!file) throw new Error('No file provided');
@@ -197,5 +293,11 @@ export function useChatState(): UseChatStateReturn {
     uploadFileForContext,
     clearMessages,
     error,
+    // New properties
+    chatSessions,
+    currentSessionId,
+    setCurrentChatId,
+    createNewChat,
+    loadChatHistory,
   };
 }

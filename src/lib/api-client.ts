@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config, getApiUrl } from './config';
+import { authService } from './auth-service';
 
 // Types based on API documentation
 export interface FileUploadResponse {
@@ -67,13 +68,29 @@ async function apiRequest<T>(
     body?: any;
     headers?: Record<string, string>;
     isFormData?: boolean;
+    requireAuth?: boolean;
   } = {}
 ): Promise<T> {
-  const { method = 'GET', body, headers = {}, isFormData = false } = options;
+  const { method = 'GET', body, headers = {}, isFormData = false, requireAuth = false } = options;
 
   const requestHeaders: Record<string, string> = {
     ...headers,
   };
+
+  // Add authorization header if required or available
+  if (requireAuth) {
+    const token = await authService.getToken();
+    if (!token) {
+      throw new Error('Authentication required but no token available');
+    }
+    requestHeaders['Authorization'] = `Bearer ${token}`;
+  } else {
+    // Add token if available (for authenticated users) but don't require it
+    const token = await authService.getToken();
+    if (token) {
+      requestHeaders['Authorization'] = `Bearer ${token}`;
+    }
+  }
 
   // Don't set Content-Type for FormData (browser will set it automatically with boundary)
   if (!isFormData) {
@@ -130,15 +147,30 @@ async function apiRequest<T>(
   }
 }
 
-// File Endpoints
+// File Endpoints (Admin only)
 export async function uploadFile(file: File): Promise<FileUploadResponse> {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('files', file); // API expects 'files' for batch upload
 
-  return apiRequest<FileUploadResponse>('/file', {
+  return apiRequest<FileUploadResponse>('/files', {
     method: 'POST',
     body: formData,
     isFormData: true,
+    requireAuth: true,
+  });
+}
+
+export async function uploadFiles(files: File[]): Promise<any> {
+  const formData = new FormData();
+  files.forEach(file => {
+    formData.append('files', file);
+  });
+
+  return apiRequest<any>('/files', {
+    method: 'POST',
+    body: formData,
+    isFormData: true,
+    requireAuth: true,
   });
 }
 
@@ -152,21 +184,121 @@ export async function deleteFile(fileId: string): Promise<{ message: string }> {
   });
 }
 
-// Text Endpoints
-export async function textQuery(query: string): Promise<TextQueryResponse> {
-  return apiRequest<TextQueryResponse>('/text', {
+// Chat Session Management
+export interface ChatSession {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  is_temporary: boolean;
+  created_at: string;
+  updated_at: string;
+  status: 'active' | 'closed';
+}
+
+export interface ChatMessage {
+  id: string;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  message_type: 'text' | 'audio' | 'file_upload';
+  metadata: any;
+  created_at: string;
+  tokens_used?: number;
+  response_time_ms?: number;
+}
+
+export interface ChatResponse {
+  session_id: string;
+  message_id: string;
+  content: string;
+  metadata: any;
+  created_at: string;
+  tokens_used: number;
+  response_time_ms: number;
+}
+
+export async function createChatSession(title?: string, description?: string): Promise<ChatSession> {
+  return apiRequest<ChatSession>('/chat/new-session', {
     method: 'POST',
-    body: { query },
+    body: title || description ? { title, description } : undefined,
   });
+}
+
+export async function getChatSessions(limit = 15, offset = 0): Promise<ChatSession[]> {
+  return apiRequest<ChatSession[]>(`/chat/sessions?limit=${limit}&offset=${offset}`, {
+    requireAuth: true,
+  });
+}
+
+export async function getChatSession(sessionId: string): Promise<ChatSession> {
+  return apiRequest<ChatSession>(`/chat/sessions/${sessionId}`);
+}
+
+export async function updateChatSession(sessionId: string, title?: string, description?: string): Promise<ChatSession> {
+  return apiRequest<ChatSession>(`/chat/sessions/${sessionId}`, {
+    method: 'PUT',
+    body: { title, description },
+  });
+}
+
+export async function deleteChatSession(sessionId: string): Promise<void> {
+  return apiRequest<void>(`/chat/sessions/${sessionId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function sendChatMessage(sessionId: string, content: string, messageType = 'text'): Promise<ChatResponse> {
+  return apiRequest<ChatResponse>(`/chat/sessions/${sessionId}/chat`, {
+    method: 'POST',
+    body: {
+      role: 'user',
+      content,
+      message_type: messageType,
+      metadata: {},
+    },
+  });
+}
+
+export async function getChatHistory(sessionId: string): Promise<{ session_id: string; messages: ChatMessage[]; total_messages: number; created_at: string }> {
+  return apiRequest<{ session_id: string; messages: ChatMessage[]; total_messages: number; created_at: string }>(`/chat/sessions/${sessionId}/history`);
+}
+
+export async function getChatMessages(sessionId: string, limit = 100, offset = 0): Promise<ChatMessage[]> {
+  return apiRequest<ChatMessage[]>(`/chat/sessions/${sessionId}/messages?limit=${limit}&offset=${offset}`);
+}
+
+// Legacy text query (now uses chat sessions)
+export async function textQuery(query: string, sessionId?: string): Promise<TextQueryResponse> {
+  if (sessionId) {
+    const response = await sendChatMessage(sessionId, query);
+    return {
+      response: response.content,
+      query,
+    };
+  }
+  
+  // Create temporary session for anonymous users
+  const session = await createChatSession('Temporary Chat');
+  const response = await sendChatMessage(session.id, query);
+  return {
+    response: response.content,
+    query,
+  };
 }
 
 export async function textQueryWithFile(
   query: string,
-  file: File
+  file: File,
+  sessionId?: string
 ): Promise<TextWithFileResponse> {
   const formData = new FormData();
   formData.append('query', query);
   formData.append('file', file);
+  
+  if (sessionId) {
+    formData.append('session_id', sessionId);
+  }
 
   return apiRequest<TextWithFileResponse>('/text-with-file', {
     method: 'POST',
@@ -175,14 +307,20 @@ export async function textQueryWithFile(
   });
 }
 
-export async function getChatHistory(): Promise<ChatHistoryResponse> {
-  return apiRequest<ChatHistoryResponse>('/chat-history');
+export async function getUserChatHistory(limit = 20, offset = 0): Promise<any> {
+  return apiRequest<any>(`/chat-history?limit=${limit}&offset=${offset}`, {
+    requireAuth: true,
+  });
 }
 
 // Speech Endpoints
-export async function speechToText(audioFile: File): Promise<SpeechResponse> {
+export async function speechToText(audioFile: File, sessionId?: string): Promise<SpeechResponse> {
   const formData = new FormData();
   formData.append('audio_file', audioFile);
+  
+  if (sessionId) {
+    formData.append('session_id', sessionId);
+  }
 
   console.log("Sending audio file:", {
     name: audioFile.name,
