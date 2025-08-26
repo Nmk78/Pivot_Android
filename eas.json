@@ -73,6 +73,7 @@
     },
     "production": {
       "node": "20.19.4",
+      
       "env": {
         "APP_ENV": "production",
         "NODE_ENV": "production"
