@@ -73,7 +73,9 @@
     },
     "production": {
       "node": "20.19.4",
-      
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "APP_ENV": "production",
         "NODE_ENV": "production"

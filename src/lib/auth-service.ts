@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { config } from './config';
+import { config, getApiUrl } from './config';
 
 // Types based on API documentation
 export interface User {
@@ -86,7 +86,9 @@ class AuthService {
       }
     }
 
-    const url = `${this.baseUrl}${endpoint}`;
+    const url = getApiUrl(endpoint);
+    
+    console.log(`API Request: ${method} ${url}`);
     
     try {
       const response = await fetch(url, requestOptions);
@@ -136,6 +138,8 @@ class AuthService {
         body: formData,
         isFormData: true,
       });
+      console.log("🚀 ~ AuthService ~ login ~ response:", response)
+
 
       // Calculate expiration time
       const expiresAt = Date.now() + (response.expires_in * 1000);
@@ -285,8 +289,25 @@ class AuthService {
 
   // Override login to notify listeners
   async loginWithNotification(credentials: LoginRequest): Promise<Session> {
+    const response = await this.login(credentials);
+    console.log("🚀 ~ AuthService ~ loginWithNotification ~ response:", response)
+    if(response.user){
+      const session: Session = {
+        user: response.user,
+        access_token: response.access_token,
+        expires_at: response.expires_at,
+      }
+      this.notifyListeners(session);
+      return session;
+    }else{
+      return null;
+    }
+
+  }  
+  
+  async loginWithoutNotification(credentials: LoginRequest): Promise<Session> {
     const session = await this.login(credentials);
-    this.notifyListeners(session);
+    // this.notifyListeners(session);
     return session;
   }
 
@@ -295,6 +316,8 @@ class AuthService {
     await this.logout();
     this.notifyListeners(null);
   }
+
+  
 }
 
 export const authService = new AuthService();

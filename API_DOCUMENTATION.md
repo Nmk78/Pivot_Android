@@ -486,7 +486,7 @@ Search through user's chat messages.
 ---
 
 ### 11. Chat with File Upload
-**POST** `/text-with-file`
+**POST** `/chat/text-with-file`
 
 Upload a file and ask questions about it.
 

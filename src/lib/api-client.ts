@@ -3,11 +3,73 @@ import { config, getApiUrl } from './config';
 import { authService } from './auth-service';
 
 // Types based on API documentation
+
+// Authentication Types
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+  full_name: string;
+  role: 'user' | 'admin';
+  status: 'active' | 'inactive';
+  created_at: string;
+  last_login: string | null;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  username: string;
+  full_name: string;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  user: User;
+}
+
+export interface UpdateUserRequest {
+  full_name?: string;
+  username?: string;
+}
+
+export interface CreateAdminRequest {
+  email: string;
+  password: string;
+  username: string;
+}
+
+// File Types
 export interface FileUploadResponse {
+  status: string;
   message: string;
   file_id: string;
+  data: Array<{
+    filename: string;
+    file_id: string;
+    file_type: string;
+    status: string;
+    message: string;
+  }>;
+}
+
+export interface FileInfo {
+  id: string;
   filename: string;
-  file_type: string;
+  upload_date: string;
+  size: number;
+}
+
+export interface FilesListResponse {
+  files: FileInfo[];
+  count: number;
 }
 
 export interface TextQueryRequest {
@@ -37,28 +99,37 @@ export interface SpeechResponse {
 }
 
 export interface ChatHistoryResponse {
-  message: string;
+  user_id: string;
+  history: Array<{
+    session: {
+      id: string;
+      title: string;
+    };
+    messages: ChatMessage[];
+  }>;
+  total_sessions: number;
 }
 
-export interface FilesListResponse {
-  message: string;
+export interface SessionStats {
+  total_messages: number;
+  total_tokens: number;
+  average_response_time: number;
+  session_duration: number;
 }
 
-// API Health Check
-export async function checkApiHealth(): Promise<boolean> {
-  try {
-    const response = await fetch(getApiUrl('/health'), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return response.ok;
-  } catch (error) {
-    console.error('API Health Check Failed:', error);
-    return false;
-  }
+export interface SearchResult {
+  id: string;
+  session_id: string;
+  content: string;
+  created_at: string;
 }
+
+export interface SearchResponse {
+  query: string;
+  results: SearchResult[];
+  total: number;
+}
+
 
 // Generic API client function
 async function apiRequest<T>(
@@ -81,7 +152,7 @@ async function apiRequest<T>(
   if (requireAuth) {
     const token = await authService.getToken();
     if (!token) {
-      throw new Error('Authentication required but no token available');
+      throw new Error('Authentication required but no token available, Maybe you are guest user');
     }
     requestHeaders['Authorization'] = `Bearer ${token}`;
   } else {
@@ -146,6 +217,72 @@ async function apiRequest<T>(
     throw error;
   }
 }
+
+
+// API Health Check
+export async function checkApiHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(getApiUrl('/health'), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('API Health Check Failed:', error);
+    return false;
+  }
+}
+
+// Authentication Endpoints
+export async function registerUser(userData: RegisterRequest): Promise<User> {
+  return apiRequest<User>('/auth/register', {
+    method: 'POST',
+    body: userData,
+  });
+}
+
+export async function loginUser(credentials: LoginRequest): Promise<LoginResponse> {
+  const formData = new FormData();
+  formData.append('username', credentials.username);
+  formData.append('password', credentials.password);
+
+  return apiRequest<LoginResponse>('/auth/login', {
+    method: 'POST',
+    body: formData,
+    isFormData: true,
+  });
+}
+
+export async function getCurrentUser(): Promise<User> {
+  return apiRequest<User>('/auth/me', {
+    requireAuth: true,
+  });
+}
+
+export async function updateCurrentUser(userData: UpdateUserRequest): Promise<User> {
+  return apiRequest<User>('/auth/me', {
+    method: 'PUT',
+    body: userData,
+    requireAuth: true,
+  });
+}
+
+export async function createAdminUser(adminData: CreateAdminRequest): Promise<User> {
+  return apiRequest<User>('/auth/admin/create', {
+    method: 'POST',
+    body: adminData,
+    requireAuth: true,
+  });
+}
+
+export async function getAllUsers(limit = 100, offset = 0): Promise<User[]> {
+  return apiRequest<User[]>(`/auth/admin/users?limit=${limit}&offset=${offset}`, {
+    requireAuth: true,
+  });
+}
+
 
 // File Endpoints (Admin only)
 export async function uploadFile(file: File): Promise<FileUploadResponse> {
@@ -219,7 +356,7 @@ export interface ChatResponse {
 }
 
 export async function createChatSession(title?: string, description?: string): Promise<ChatSession> {
-  return apiRequest<ChatSession>('/chat/new-session', {
+  return apiRequest<ChatSession>('/chat/new-sessions', {
     method: 'POST',
     body: title || description ? { title, description } : undefined,
   });
@@ -268,6 +405,16 @@ export async function getChatMessages(sessionId: string, limit = 100, offset = 0
   return apiRequest<ChatMessage[]>(`/chat/sessions/${sessionId}/messages?limit=${limit}&offset=${offset}`);
 }
 
+export async function getSessionStats(sessionId: string): Promise<SessionStats> {
+  return apiRequest<SessionStats>(`/chat/sessions/${sessionId}/stats`);
+}
+
+export async function searchMessages(query: string, limit = 20): Promise<SearchResponse> {
+  return apiRequest<SearchResponse>(`/chat/search?query=${encodeURIComponent(query)}&limit=${limit}`, {
+    requireAuth: true,
+  });
+}
+
 // Legacy text query (now uses chat sessions)
 export async function textQuery(query: string, sessionId?: string): Promise<TextQueryResponse> {
   if (sessionId) {
@@ -300,21 +447,21 @@ export async function textQueryWithFile(
     formData.append('session_id', sessionId);
   }
 
-  return apiRequest<TextWithFileResponse>('/text-with-file', {
+  return apiRequest<TextWithFileResponse>('/chat/text-with-file', {
     method: 'POST',
     body: formData,
     isFormData: true,
   });
 }
 
-export async function getUserChatHistory(limit = 20, offset = 0): Promise<any> {
-  return apiRequest<any>(`/chat-history?limit=${limit}&offset=${offset}`, {
+export async function getUserChatHistory(limit = 20, offset = 0): Promise<ChatHistoryResponse> {
+  return apiRequest<ChatHistoryResponse>(`/chat-history?limit=${limit}&offset=${offset}`, {
     requireAuth: true,
   });
 }
 
 // Speech Endpoints
-export async function speechToText(audioFile: File, sessionId?: string): Promise<SpeechResponse> {
+export async function speechToText(audioFile: File, sessionId?: string, language: 'auto' | 'en' | 'my' = 'auto'): Promise<SpeechResponse> {
   const formData = new FormData();
   formData.append('audio_file', audioFile);
   
@@ -325,76 +472,17 @@ export async function speechToText(audioFile: File, sessionId?: string): Promise
   console.log("Sending audio file:", {
     name: audioFile.name,
     size: audioFile.size,
-    type: audioFile.type
+    type: audioFile.type,
+    language
   });
 
-  return apiRequest<SpeechResponse>('/speech', {
+  const endpoint = language === 'auto' ? '/speech' : `/speech/${language}`;
+  
+  return apiRequest<SpeechResponse>(endpoint, {
     method: 'POST',
     body: formData,
     isFormData: true,
   });
 }
 
-export async function speechStream(): Promise<{ message: string }> {
-  return apiRequest<{ message: string }>('/speech-stream');
-}
-
-// Legacy functions for backward compatibility (if needed)
-export async function fetchApi(
-  endpoint: string,
-  options: { token: string; chatId?: string; method?: string; body?: any },
-) {
-  const token = await AsyncStorage.getItem("session");
-
-  const response = await fetch(
-    `${config.api.baseUrl}${endpoint.startsWith('/') ? endpoint : `/api/${endpoint}`}`,
-    {
-      method: options.method || "GET",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      ...(options.body && { body: JSON.stringify(options.body) }),
-      ...(options.chatId && !options.body && {
-        body: JSON.stringify({ chatId: options.chatId }),
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(`API error: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-export async function getChatsByUserId({ token }: { token: string }) {
-  try {
-    console.log("getChatsByUserId called");
-    const response = await fetchApi("history", {
-      token,
-    });
-    console.log("getChatsByUserId response", response);
-    return response;
-  } catch (error) {
-    console.error("Error fetching chats.", error);
-    throw new Error("Failed to fetch chats");
-  }
-}
-
-export async function getChatById({
-  chatId,
-  token,
-}: {
-  chatId: string;
-  token: string;
-}) {
-  try {
-    const response = await fetchApi("/api/chat", { chatId, token });
-    return response;
-  } catch (error) {
-    console.error("Error fetching chat.", error);
-    throw new Error("Failed to fetch chat");
-  }
-}
+// Note: speechStream endpoint removed as it's not documented in the current API

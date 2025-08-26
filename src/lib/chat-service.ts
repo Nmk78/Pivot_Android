@@ -189,6 +189,7 @@ class ChatServiceImpl implements ChatService {
       console.error('Error fetching sessions:', error);
       throw new Error('Failed to fetch sessions');
     }
+    
   }
 
   async getSessionHistory(sessionId: string): Promise<ChatMessage[]> {

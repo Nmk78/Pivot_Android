@@ -67,8 +67,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         username: email,
         password,
       });
-      setSession(newSession);
-      setUser(newSession.user);
+      // Session state will be updated via the listener notification
+      // Don't manually set session here to avoid double updates
     } catch (error) {
       throw error;
     } finally {
