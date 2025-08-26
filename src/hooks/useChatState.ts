@@ -17,8 +17,9 @@ export interface UseChatStateReturn {
   chatSessions: ChatSession[];
   currentSessionId: string | null;
   setCurrentChatId: (sessionId: string) => void;
-  createNewChat: () => Promise<void>;
+  createNewChat: () => Promise<string>;
   loadChatHistory: (sessionId: string) => Promise<void>;
+  refreshSessions: () => Promise<void>;
 }
 
 export function useChatState(): UseChatStateReturn {
@@ -42,23 +43,19 @@ export function useChatState(): UseChatStateReturn {
     }
   }, []);
 
-  const createNewChat = useCallback(async () => {
+  const createNewChat = useCallback(async (): Promise<string> => {
     try {
       const newSession = await chatService.createSession('New Chat');
       setChatSessions(prev => [newSession, ...prev]);
       setCurrentSessionId(newSession.id);
       setMessages([]);
       setError(null);
+      return newSession.id;
     } catch (err) {
       console.error('Failed to create new chat:', err);
       setError('Failed to create new chat');
+      throw err;
     }
-  }, []);
-
-  const setCurrentChatId = useCallback(async (sessionId: string) => {
-    setCurrentSessionId(sessionId);
-    chatService.setCurrentSession(sessionId);
-    await loadChatHistory(sessionId);
   }, []);
 
   const loadChatHistory = useCallback(async (sessionId: string) => {
@@ -75,6 +72,12 @@ export function useChatState(): UseChatStateReturn {
       setIsLoading(false);
     }
   }, []);
+
+  const setCurrentChatId = useCallback(async (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    chatService.setCurrentSession(sessionId);
+    await loadChatHistory(sessionId);
+  }, [loadChatHistory]);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
@@ -299,5 +302,6 @@ export function useChatState(): UseChatStateReturn {
     setCurrentChatId,
     createNewChat,
     loadChatHistory,
+    refreshSessions: loadSessions,
   };
 }

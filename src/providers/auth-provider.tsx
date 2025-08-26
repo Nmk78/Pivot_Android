@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authService, type Session, type User } from '@/lib/auth-service';
+import { ApiException } from '@/lib/api-client';
 
 interface AuthContextType {
   user: User | null;
@@ -63,13 +64,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const newSession = await authService.loginWithNotification({
+      const newSession = await authService.loginWithoutNotification({
         username: email,
         password,
       });
-      // Session state will be updated via the listener notification
-      // Don't manually set session here to avoid double updates
+      // Only update state on successful login
+      setSession(newSession);
+      setUser(newSession.user);
     } catch (error) {
+      console.error('Sign in error:', error);
+      // Don't update session state on error - this prevents redirects
+      if (error instanceof ApiException) {
+        throw new Error(error.message);
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -87,6 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       // Note: After registration, user needs to sign in separately
     } catch (error) {
+      console.error('Sign up error:', error);
+      if (error instanceof ApiException) {
+        throw new Error(error.message);
+      }
       throw error;
     } finally {
       setLoading(false);

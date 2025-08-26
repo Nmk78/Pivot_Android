@@ -21,10 +21,15 @@ export default function Login() {
     }
 
     try {
+      console.log("[auth][login] Attempting login", { email });
       await signIn(email, password);
-      // Navigation will be handled by the auth provider
+      console.log("[auth][login] Login successful");
+      // Only redirect on successful login
+      router.replace("/(app)");
     } catch (error) {
+      console.error("[auth][login] Login failed", error);
       Alert.alert("Error", error instanceof Error ? error.message : "Login failed");
+      // Don't redirect on error - stay on login page
     }
   };
 

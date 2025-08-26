@@ -19,7 +19,7 @@ export default function AppLayout() {
             onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
             style={{ marginLeft: 15 }}
           >
-            <Menu size={24} color="white" />
+            <Menu size={26} color="white" />
           </Pressable>
         ),
       })}

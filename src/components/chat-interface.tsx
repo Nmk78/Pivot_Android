@@ -73,53 +73,67 @@ export const ChatInterface = forwardRef<ScrollView, ChatInterfaceProps>(
                     return null;
                   })}
 
-<View
-  className={cn(
-    "flex-row px-4 py-2 rounded-3xl",
-    m.role === "user"
-      ? // User messages → right aligned, white/light blue
-        "ml-auto w-min max-w-[85%] bg-white text-blue-700 dark:bg-blue-900 dark:text-blue-100 shadow-sm"
-      : // Bot messages → left aligned, blue background
-        "w-fit max-w-[85%] pl-0 bg-blue-100 text-blue-900 dark:bg-blue-800 dark:text-blue-50 shadow-sm"
-  )}
->
-  {m.content.length > 0 && (
-    <>
-      {m.role !== "user" && (
-        <View className="mr-2 mt-1 h-8 w-8 items-center justify-center rounded-full bg-blue-200 dark:bg-blue-700">
-          <Text className="text-base text-blue-900 dark:text-blue-100">🤖</Text>
-        </View>
-      )}
+                  <View
+                    className={cn(
+                      "flex-row rounded-3xl mb-3 px-4 py-2",
+                      m.role === "user"
+                        ? // User messages → right aligned, white/light blue
+                          "ml-auto w-min max-w-[85%] bg-white text-blue-700 shadow-sm dark:bg-blue-900 dark:text-blue-100"
+                        : // Bot messages → left aligned, blue background
+                          "w-fit max-w-[85%] bg-blue-100 pl-0 text-blue-900 shadow-sm dark:bg-blue-800 dark:text-blue-50",
+                    )}
+                  >
+                    {m.content.length > 0 && (
+                      <>
+                        {m.role !== "user" && (
+                          <View className="mr-2 mt-1 h-8 w-8 items-center justify-center">
+                            <Text className="text-base text-blue-900 dark:text-blue-100">
+                              🤖
+                            </Text>
+                          </View>
+                        )}
 
-      <View className="flex-shrink dark:text-white text-black w-auto">
-        <CustomMarkdown content={m.content} />
+                        <View className="w-auto flex-shrink text-black dark:text-white">
+                          <CustomMarkdown content={m.content} />
 
-        {m.role === "user" && (
-          <View className="flex-row items-center mt-2 space-x-2">
-            {m.fileUri && (
-              <View className="flex-row items-center bg-blue-50 dark:bg-blue-700/40 rounded-full px-2 py-1">
-                <Paperclip size={14} color={colorScheme === "dark" ? "#93c5fd" : "#2563eb"} />
-                <Text className="ml-1 text-xs text-blue-700 dark:text-blue-300">
-                  File attached
-                </Text>
-              </View>
-            )}
-            {m.audioUri && (
-              <View className="flex-row items-center bg-blue-50 dark:bg-blue-700/40 rounded-full px-2 py-1">
-                <Mic size={14} color={colorScheme === "dark" ? "#c4b5fd" : "#2563eb"} />
-                <Text className="ml-1 text-xs text-blue-700 dark:text-blue-200">
-                  Voice message
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-      </View>
-    </>
-  )}
-</View>
-
-
+                          {m.role === "user" && (
+                            <View className="mt-2 flex-row items-center space-x-2">
+                              {m.fileUri && (
+                                <View className="flex-row items-center rounded-full bg-blue-50 px-2 py-1 dark:bg-blue-700/40">
+                                  <Paperclip
+                                    size={14}
+                                    color={
+                                      colorScheme === "dark"
+                                        ? "#93c5fd"
+                                        : "#2563eb"
+                                    }
+                                  />
+                                  <Text className="ml-1 text-xs text-blue-700 dark:text-blue-300">
+                                    File attached
+                                  </Text>
+                                </View>
+                              )}
+                              {m.audioUri && (
+                                <View className="flex-row items-center rounded-full bg-blue-50 px-2 py-1 dark:bg-blue-700/40">
+                                  <Mic
+                                    size={14}
+                                    color={
+                                      colorScheme === "dark"
+                                        ? "#c4b5fd"
+                                        : "#2563eb"
+                                    }
+                                  />
+                                  <Text className="ml-1 text-xs text-blue-700 dark:text-blue-200">
+                                    Voice message
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                          )}
+                        </View>
+                      </>
+                    )}
+                  </View>
 
                   {isLoading &&
                     messages[messages.length - 1].role === "user" &&

@@ -9,7 +9,7 @@ import { ChatInput } from "@/components/ui/chat-input";
 import { SuggestedActions } from "@/components/suggested-actions";
 import type { ScrollView as GHScrollView } from "react-native-gesture-handler";
 import { useStore } from "@/lib/globalStore";
-import { MessageCirclePlusIcon, Menu } from "lucide-react-native";
+import { MessageCirclePlusIcon, Menu, Info, BadgeInfo } from "lucide-react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useChatState } from "@/hooks/useChatState";
 import { SelectedFile } from "@/hooks/useFilePicker";
@@ -51,6 +51,7 @@ const HomePage = () => {
     uploadFileForContext,
     clearMessages,
     error,
+    setCurrentChatId,
   } = useChatState();
 
   const handleNewChat = useCallback(() => {
@@ -76,9 +77,9 @@ const HomePage = () => {
   const handleSubmit = useCallback(async () => {
     const textToSend = inputText.trim();
     if (!textToSend && !selectedFile) return;
-    
-    setInputText('');
-    
+
+    setInputText("");
+
     try {
       if (selectedFile && textToSend) {
         // Send message with file context
@@ -93,23 +94,32 @@ const HomePage = () => {
         // Send regular text message
         await sendMessage(textToSend);
       }
-      
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    } catch (error) {
-      console.error('Error sending message:', error);
-      // You might want to show an error message to the user here
-    }
-  }, [inputText, selectedFile, sendMessage, sendMessageWithFile, uploadFileForContext]);
 
-  const handleVoiceRecordingComplete = useCallback(async (audioUri: string) => {
-    try {
-      await sendSpeechMessage(audioUri);
       scrollViewRef.current?.scrollToEnd({ animated: true });
     } catch (error) {
-      console.error('Error processing voice recording:', error);
+      console.error("Error sending message:", error);
       // You might want to show an error message to the user here
     }
-  }, [sendSpeechMessage]);
+  }, [
+    inputText,
+    selectedFile,
+    sendMessage,
+    sendMessageWithFile,
+    uploadFileForContext,
+  ]);
+
+  const handleVoiceRecordingComplete = useCallback(
+    async (audioUri: string) => {
+      try {
+        await sendSpeechMessage(audioUri);
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      } catch (error) {
+        console.error("Error processing voice recording:", error);
+        // You might want to show an error message to the user here
+      }
+    },
+    [sendSpeechMessage],
+  );
 
   const handleFileSelected = useCallback((file: SelectedFile) => {
     setSelectedFile(file);
@@ -122,14 +132,20 @@ const HomePage = () => {
   const { bottom } = useSafeAreaInsets();
   const scrollViewRef = useRef<GHScrollView>(null);
 
-  // Reset messages when chatId changes
+  // Handle chatId changes - either load existing session or start fresh
   useEffect(() => {
     if (chatId) {
-      clearMessages();
-      setInputText("");
-      setSelectedFile(null);
+      if (chatId.from === "history") {
+        // Load existing session messages
+        setCurrentChatId(chatId.id);
+      } else {
+        // New chat - clear messages and set current session
+        clearMessages();
+        setInputText("");
+        setSelectedFile(null);
+      }
     }
-  }, [chatId, clearMessages]);
+  }, [chatId, clearMessages, setCurrentChatId]);
 
   const { colorScheme, setColorScheme, isDarkColorScheme } = useColorScheme();
 
@@ -143,14 +159,20 @@ const HomePage = () => {
         options={{
           headerShown: true,
           title: "Pivot",
-          headerStyle: { backgroundColor: isDarkColorScheme ? "#1e293b" : "#51a2ff" },
+          headerStyle: {
+            backgroundColor: isDarkColorScheme ? "#1e293b" : "#51a2ff",
+          },
           headerTitleStyle: { color: "white" },
 
           headerRight: () => (
-            <Pressable className="mr-5" disabled={!messages.length} onPress={handleNewChat}>
-              <MessageCirclePlusIcon
-                size={20}
-                color="#eee"
+            <Pressable
+              className="mr-5"
+              disabled={!messages.length}
+              onPress={handleNewChat}
+            >
+              <Info
+                size={26}
+                color={isDarkColorScheme ? "#60a5fa" : "#eee"}
               />
             </Pressable>
           ),
@@ -168,11 +190,11 @@ const HomePage = () => {
       </ScrollView>
 
       {messages.length === 0 && (
-        <SuggestedActions 
-          hasInput={inputText.length > 0} 
+        <SuggestedActions
+          hasInput={inputText.length > 0}
           append={async (message) => {
             await sendMessage(message.content);
-          }} 
+          }}
         />
       )}
 

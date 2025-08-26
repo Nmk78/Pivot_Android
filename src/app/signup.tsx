@@ -23,11 +23,16 @@ export default function SignUp() {
     }
 
     try {
+      console.log("[auth][signup] Attempting registration", { email, username });
       await signUp(email, password, username, fullName);
+      console.log("[auth][signup] Registration successful");
       Alert.alert("Success", "Account created successfully! You can now log in.");
+      // Only redirect to login on successful registration
       router.replace("/login");
     } catch (error) {
+      console.error("[auth][signup] Registration failed", error);
       Alert.alert("Error", error instanceof Error ? error.message : "Registration failed");
+      // Don't redirect on error - stay on signup page
     }
   };
 

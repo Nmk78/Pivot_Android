@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config, getApiUrl } from './config';
+import { ApiException } from './api-client';
 
 // Types based on API documentation
 export interface User {
@@ -32,10 +33,7 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface AuthError {
-  message: string;
-  status?: number;
-}
+// Remove AuthError interface as we now use ApiException
 
 export interface Session {
   user: User;
@@ -95,22 +93,38 @@ class AuthService {
       
       if (!response.ok) {
         const errorText = await response.text();
-        let errorMessage = `Authentication error: ${response.status}`;
-        
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.detail || errorMessage;
-        } catch {
-          errorMessage = errorText || errorMessage;
-        }
-        
-        throw new Error(errorMessage);
+        console.error("Auth API Error:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+          url: url
+        });
+        throw ApiException.fromResponse(response.status, errorText);
       }
 
       return await response.json();
     } catch (error) {
-      console.error("Auth API Error:", error);
-      throw error;
+      // Re-throw ApiException as-is
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      
+      // Handle network and other errors
+      if (error instanceof TypeError && error.message.includes('Network request failed')) {
+        throw new ApiException({
+          message: 'Network connection failed. Please check your internet connection.',
+          status: 0,
+          detail: error.message,
+          code: 'NETWORK_ERROR'
+        });
+      }
+      
+      throw new ApiException({
+        message: error instanceof Error ? error.message : 'Authentication request failed',
+        status: 0,
+        detail: error instanceof Error ? error.stack : String(error),
+        code: 'UNKNOWN_ERROR'
+      });
     }
   }
 
@@ -122,7 +136,15 @@ class AuthService {
       });
       return user;
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Registration failed');
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      throw new ApiException({
+        message: 'Registration failed',
+        status: 0,
+        detail: error instanceof Error ? error.message : String(error),
+        code: 'REGISTRATION_ERROR'
+      });
     }
   }
 
@@ -155,7 +177,15 @@ class AuthService {
 
       return session;
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Login failed');
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      throw new ApiException({
+        message: 'Login failed',
+        status: 0,
+        detail: error instanceof Error ? error.message : String(error),
+        code: 'LOGIN_ERROR'
+      });
     }
   }
 
@@ -289,26 +319,35 @@ class AuthService {
 
   // Override login to notify listeners
   async loginWithNotification(credentials: LoginRequest): Promise<Session> {
-    const response = await this.login(credentials);
-    console.log("🚀 ~ AuthService ~ loginWithNotification ~ response:", response)
-    if(response.user){
-      const session: Session = {
-        user: response.user,
-        access_token: response.access_token,
-        expires_at: response.expires_at,
+    try {
+      const session = await this.login(credentials);      
+      if (session && session.user) {
+        this.notifyListeners(session);
+        return session;
+      } else {
+        throw new ApiException({
+          message: 'Login failed: Invalid response from server',
+          status: 500,
+          detail: 'Server returned invalid session data',
+          code: 'INVALID_SESSION_RESPONSE'
+        });
       }
-      this.notifyListeners(session);
-      return session;
-    }else{
-      return null;
+    } catch (error) {
+      console.error("Login with notification failed:", error);
+      throw error;
     }
-
   }  
   
   async loginWithoutNotification(credentials: LoginRequest): Promise<Session> {
-    const session = await this.login(credentials);
-    // this.notifyListeners(session);
-    return session;
+    try {
+      const session = await this.login(credentials);
+      console.log("🚀 ~ AuthService ~ loginWithoutNotification ~ session:", session);
+      // Don't notify listeners to prevent automatic redirects
+      return session;
+    } catch (error) {
+      console.error("Login without notification failed:", error);
+      throw error;
+    }
   }
 
   // Override logout to notify listeners

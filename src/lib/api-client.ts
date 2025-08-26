@@ -2,6 +2,48 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config, getApiUrl } from './config';
 import { authService } from './auth-service';
 
+// Standardized API Error Types
+export interface ApiError {
+  message: string;
+  status: number;
+  detail?: string;
+  code?: string;
+}
+
+export class ApiException extends Error {
+  public readonly status: number;
+  public readonly detail?: string;
+  public readonly code?: string;
+
+  constructor(error: ApiError) {
+    super(error.message);
+    this.name = 'ApiException';
+    this.status = error.status;
+    this.detail = error.detail;
+    this.code = error.code;
+  }
+
+  static fromResponse(status: number, responseText: string): ApiException {
+    let detail = responseText;
+    let message = `API error: ${status}`;
+    
+    try {
+      const errorData = JSON.parse(responseText);
+      detail = errorData.detail || errorData.message || responseText;
+      message = detail;
+    } catch {
+      // Keep original responseText as detail
+    }
+
+    return new ApiException({
+      message,
+      status,
+      detail,
+      code: `HTTP_${status}`
+    });
+  }
+}
+
 // Types based on API documentation
 
 // Authentication Types
@@ -197,8 +239,13 @@ async function apiRequest<T>(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("API Error Response:", errorText);
-      throw new Error(`API error: ${response.status} - ${errorText}`);
+      console.error("API Error Response:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+        url: url
+      });
+      throw ApiException.fromResponse(response.status, errorText);
     }
 
     const result = await response.json();
@@ -206,15 +253,33 @@ async function apiRequest<T>(
     return result;
   } catch (error) {
     console.error("Network Error:", error);
+    
+    // Re-throw ApiException as-is
+    if (error instanceof ApiException) {
+      throw error;
+    }
+    
+    // Handle network errors
     if (error instanceof TypeError && error.message.includes('Network request failed')) {
-      // Check if it's a CORS issue or server not available
       const isCorsIssue = url.includes('localhost') || url.includes('127.0.0.1');
       const errorMessage = isCorsIssue 
         ? `Network request failed. This might be a CORS issue. Please ensure your API server is running and allows requests from this app. URL: ${url}`
         : `Network request failed. Please check your internet connection and API server status. URL: ${url}`;
-      throw new Error(errorMessage);
+      throw new ApiException({
+        message: errorMessage,
+        status: 0,
+        detail: error.message,
+        code: 'NETWORK_ERROR'
+      });
     }
-    throw error;
+    
+    // Handle other errors
+    throw new ApiException({
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      status: 0,
+      detail: error instanceof Error ? error.stack : String(error),
+      code: 'UNKNOWN_ERROR'
+    });
   }
 }
 
@@ -356,7 +421,7 @@ export interface ChatResponse {
 }
 
 export async function createChatSession(title?: string, description?: string): Promise<ChatSession> {
-  return apiRequest<ChatSession>('/chat/new-sessions', {
+  return apiRequest<ChatSession>('/chat/new-session', {
     method: 'POST',
     body: title || description ? { title, description } : undefined,
   });

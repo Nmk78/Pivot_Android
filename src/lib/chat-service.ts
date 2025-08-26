@@ -7,7 +7,9 @@ import {
   sendChatMessage,
   getChatHistory,
   getChatSessions,
-  type ChatSession
+  updateChatSession,
+  type ChatSession,
+  ApiException
 } from './api-client';
 import { authService } from './auth-service';
 import * as FileSystem from 'expo-file-system';
@@ -30,6 +32,7 @@ export interface ChatService {
   createSession: (title?: string) => Promise<ChatSession>;
   getSessions: () => Promise<ChatSession[]>;
   getSessionHistory: (sessionId: string) => Promise<ChatMessage[]>;
+  updateSessionTitle: (sessionId: string, title: string) => Promise<ChatSession>;
 }
 
 class ChatServiceImpl implements ChatService {
@@ -53,7 +56,15 @@ class ChatServiceImpl implements ChatService {
       };
     } catch (error) {
       console.error('Error sending message:', error);
-      throw new Error('Failed to send message');
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      throw new ApiException({
+        message: 'Failed to send message',
+        status: 0,
+        detail: error instanceof Error ? error.message : String(error),
+        code: 'CHAT_MESSAGE_ERROR'
+      });
     }
   }
 
@@ -98,7 +109,15 @@ class ChatServiceImpl implements ChatService {
       };
     } catch (error) {
       console.error('Error sending message with file:', error);
-      throw new Error('Failed to send message with file');
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      throw new ApiException({
+        message: 'Failed to send message with file',
+        status: 0,
+        detail: error instanceof Error ? error.message : String(error),
+        code: 'CHAT_FILE_MESSAGE_ERROR'
+      });
     }
   }
 
@@ -144,7 +163,15 @@ class ChatServiceImpl implements ChatService {
       };
     } catch (error) {
       console.error('Error processing speech:', error);
-      throw new Error('Failed to process speech');
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      throw new ApiException({
+        message: 'Failed to process speech',
+        status: 0,
+        detail: error instanceof Error ? error.message : String(error),
+        code: 'SPEECH_PROCESSING_ERROR'
+      });
     }
   }
 
@@ -167,7 +194,15 @@ class ChatServiceImpl implements ChatService {
       return response.file_id;
     } catch (error) {
       console.error('Error uploading file:', error);
-      throw new Error('Failed to upload file');
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      throw new ApiException({
+        message: 'Failed to upload file',
+        status: 0,
+        detail: error instanceof Error ? error.message : String(error),
+        code: 'FILE_UPLOAD_ERROR'
+      });
     }
   }
 
@@ -178,7 +213,15 @@ class ChatServiceImpl implements ChatService {
       return session;
     } catch (error) {
       console.error('Error creating session:', error);
-      throw new Error('Failed to create session');
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      throw new ApiException({
+        message: 'Failed to create session',
+        status: 0,
+        detail: error instanceof Error ? error.message : String(error),
+        code: 'SESSION_CREATE_ERROR'
+      });
     }
   }
 
@@ -187,7 +230,15 @@ class ChatServiceImpl implements ChatService {
       return await getChatSessions();
     } catch (error) {
       console.error('Error fetching sessions:', error);
-      throw new Error('Failed to fetch sessions');
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      throw new ApiException({
+        message: 'Failed to fetch sessions',
+        status: 0,
+        detail: error instanceof Error ? error.message : String(error),
+        code: 'SESSIONS_FETCH_ERROR'
+      });
     }
     
   }
@@ -203,7 +254,15 @@ class ChatServiceImpl implements ChatService {
       }));
     } catch (error) {
       console.error('Error fetching session history:', error);
-      throw new Error('Failed to fetch session history');
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      throw new ApiException({
+        message: 'Failed to fetch session history',
+        status: 0,
+        detail: error instanceof Error ? error.message : String(error),
+        code: 'SESSION_HISTORY_ERROR'
+      });
     }
   }
 
@@ -213,6 +272,23 @@ class ChatServiceImpl implements ChatService {
 
   getCurrentSessionId(): string | null {
     return this.currentSessionId;
+  }
+
+  async updateSessionTitle(sessionId: string, title: string): Promise<ChatSession> {
+    try {
+      return await updateChatSession(sessionId, title);
+    } catch (error) {
+      console.error('Error updating session title:', error);
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      throw new ApiException({
+        message: 'Failed to update session title',
+        status: 0,
+        detail: error instanceof Error ? error.message : String(error),
+        code: 'SESSION_UPDATE_ERROR'
+      });
+    }
   }
 
   private getMimeType(fileName: string): string {
