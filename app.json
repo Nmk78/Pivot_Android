@@ -88,7 +88,7 @@
       }
     },
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "sdkVersion"
     },
     "owner": "naymyokhant",
     "extra": {
