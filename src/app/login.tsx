@@ -138,6 +138,20 @@ export default function Login() {
                   </Text>
                 </TouchableOpacity>
               </View>
+              {/* Go to home screen*/}
+              <View className="items-center">
+                <Text className="text-gray-600 dark:text-gray-400 text-sm mb-3" style={{ lineHeight: 18 }}>
+                  Or
+                </Text>
+                <TouchableOpacity
+                  onPress={() => router.push("/")}
+                  className="py-2"
+                >
+                  <Text className="text-gray-900 dark:text-white font-medium text-sm" style={{ lineHeight: 18 }}>
+                    use as a guest
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </ScrollView>

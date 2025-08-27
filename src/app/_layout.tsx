@@ -20,18 +20,17 @@ function RootLayoutNav() {
     if (user && inAuthScreens) {
       router.replace("/(app)");
     }
-    // If user is not authenticated and trying to access app, redirect to login
-    else if (!user && inAuthGroup) {
-      router.replace("/login");
-    }
+    // If user is not authenticated and trying to access protected app routes, redirect to login
+    // Allow guest access to app - don't force redirect to login
+    // else if (!user && inAuthGroup) {
+    //   router.replace("/login");
+    // }
+    
     // If no segments or undefined (app just started)
     else if (!segments[0]) {
-      // If user is authenticated, go to app; otherwise go to login
-      if (user) {
-        router.replace("/(app)");
-      } else {
-        router.replace("/login");
-      }
+      // Allow guest access - redirect to app regardless of authentication status
+      // Users can choose to login from within the app if needed
+      router.replace("/(app)");
     }
   }, [user, segments, loading]);
 

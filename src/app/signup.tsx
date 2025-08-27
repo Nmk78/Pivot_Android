@@ -178,6 +178,19 @@ export default function SignUp() {
                   </Text>
                 </TouchableOpacity>
               </View>
+              <View className="items-center">
+                <Text className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+                  Or
+                </Text>
+                <TouchableOpacity
+                  onPress={() => router.push("/")}
+                  className="py-2"
+                >
+                  <Text className="text-gray-900 dark:text-white font-medium text-sm">
+                    Use without an account
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </ScrollView>

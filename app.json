@@ -5,14 +5,12 @@
     "scheme": "lite.pivot.com",
     "userInterfaceStyle": "automatic",
     "orientation": "portrait",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "web": {
       "output": "server",
       "bundler": "metro"
     },
-    "assetBundlePatterns": [
-      "src/assets/**/*"
-    ],
+    "assetBundlePatterns": ["src/assets/**/*"],
     "plugins": [
       [
         "expo-router",
@@ -108,7 +106,9 @@
       "backgroundColor": "#ffffff"
     },
     "updates": {
-      "url": "https://u.expo.dev/eb6a0abc-050a-4ab1-bd46-317beca9e1f9"
+      "url": "https://u.expo.dev/eb6a0abc-050a-4ab1-bd46-317beca9e1f9",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
     }
   }
 }
